@@ -56,6 +56,13 @@ def _cmd_run_pipeline(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_visualize(_: argparse.Namespace) -> int:
+    from tools.pipeline_visualizer import launch
+
+    launch()
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Run local LLM pipelines without any web services.",
@@ -83,6 +90,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional directory where run artifacts should be stored",
     )
     run_parser.set_defaults(func=_cmd_run_pipeline)
+
+    visualize_parser = subparsers.add_parser(
+        "visualize",
+        help="Launch a GUI to inspect prompts and step dependencies",
+    )
+    visualize_parser.set_defaults(func=_cmd_visualize)
 
     return parser
 
