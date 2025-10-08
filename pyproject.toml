@@ -3,17 +3,13 @@ name = "llm-agent"
 version = "0.1.0"
 description = "Local-first agent pipeline orchestrator"
 authors = [{name = "LLM Agent Team"}]
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 dependencies = [
-    "fastapi",
-    "uvicorn[standard]",
-    "typer",
-    "pydantic",
     "jinja2"
 ]
 
 [project.scripts]
-agent = "core.cli:app"
+agent = "core.cli:main"
 
 [build-system]
 requires = ["setuptools>=61.0"]
