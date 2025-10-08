@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "name": "Book Outline Draft",
+  "description": "Generate a simple outline and chapter plan for a book project.",
+  "inputs": {
+    "title": "string",
+    "genre": "string",
+    "audience": "string"
+  },
+  "steps": [
+    {
+      "id": "outline",
+      "type": "llm_call",
+      "prompt": "book_outline.j2",
+      "params": {
+        "temperature": 0.2,
+        "max_tokens": 600
+      },
+      "outputs": {
+        "outline_md": "content"
+      }
+    },
+    {
+      "id": "plan",
+      "type": "transform",
+      "code": "python:tools.plan.plan_chapters",
+      "inputs": {
+        "outline_md": "outline.outline_md"
+      },
+      "outputs": {
+        "chapters": "chapters"
+      }
+    },
+    {
+      "id": "save_outline",
+      "type": "store",
+      "inputs": {
+        "outline": "outline.outline_md"
+      },
+      "filename": "outline.md",
+      "content_key": "outline"
+    }
+  ]
+}
