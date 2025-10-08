@@ -1,51 +1,97 @@
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
-from typing import Optional
-
-import typer
+from typing import Iterable
 
 from .orchestrator import PipelineRunner
 from .pipeline_loader import PipelineLoader
 
-app = typer.Typer(help="Agent pipeline CLI")
 
+def _parse_params(values: Iterable[str]) -> dict[str, str]:
+    """Turn key=value pairs into a dictionary.
 
-def parse_params(params: list[str]) -> dict[str, str]:
+    Parameters are provided from the command line in the form ``key=value``. This helper
+    validates the shape and converts the list into a mapping so it can be passed to the
+    pipeline runner as structured inputs.
+    """
+
     parsed: dict[str, str] = {}
-    for item in params:
+    for item in values:
         if "=" not in item:
-            raise typer.BadParameter(f"Parameters must be in key=value format. Got '{item}'")
+            raise ValueError(f"Parameters must be in key=value format (got '{item}')")
         key, value = item.split("=", 1)
         parsed[key] = value
     return parsed
 
 
-@app.command()
-def list() -> None:  # type: ignore[override]
-    """List available pipelines."""
+def _cmd_list_pipelines(_: argparse.Namespace) -> int:
     loader = PipelineLoader()
-    for pipeline in loader.list_pipelines():
-        typer.echo(f"- {pipeline['name']} ({pipeline['path']})")
-        if pipeline.get("description"):
-            typer.echo(f"    {pipeline['description']}")
+    pipelines = loader.list_pipelines()
+    if not pipelines:
+        print("No pipelines were found. Add JSON definitions under the 'pipelines/' folder.")
+        return 0
+
+    for pipeline in pipelines:
+        print(f"- {pipeline['name']} ({pipeline['path']})")
+        description = pipeline.get("description")
+        if description:
+            print(f"    {description}")
+    return 0
 
 
-@app.command()
-def run(
-    pipeline: str = typer.Argument(..., help="Pipeline name or path"),
-    param: list[str] = typer.Option([], "--param", "-p", help="Input parameter key=value"),
-    artifacts_dir: Optional[Path] = typer.Option(None, help="Override artifacts output directory"),
-) -> None:
-    """Run a pipeline with the provided parameters."""
+def _cmd_run_pipeline(args: argparse.Namespace) -> int:
     loader = PipelineLoader()
-    pipeline_def = loader.load(pipeline)
-    inputs = parse_params(param)
-    runner = PipelineRunner(artifacts_dir=artifacts_dir)
+    pipeline_def = loader.load(args.pipeline)
+    try:
+        inputs = _parse_params(args.params)
+    except ValueError as exc:  # pragma: no cover - defensive branch
+        print(f"Error: {exc}")
+        return 1
+
+    runner = PipelineRunner(artifacts_dir=args.artifacts_dir)
     result = runner.run(pipeline_def, inputs)
-    typer.echo(f"Run ID: {result['run_id']}")
-    typer.echo(f"Artifacts: {result['artifacts_path']}")
+    print(f"Run ID: {result['run_id']}")
+    print(f"Artifacts: {result['artifacts_path']}")
+    return 0
 
 
-if __name__ == "__main__":
-    app()
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Run local LLM pipelines without any web services.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    list_parser = subparsers.add_parser("list", help="Show available pipelines")
+    list_parser.set_defaults(func=_cmd_list_pipelines)
+
+    run_parser = subparsers.add_parser("run", help="Execute a pipeline with the provided inputs")
+    run_parser.add_argument("pipeline", help="Pipeline name or JSON path")
+    run_parser.add_argument(
+        "--param",
+        "-p",
+        dest="params",
+        action="append",
+        default=[],
+        metavar="key=value",
+        help="Pipeline input parameter",
+    )
+    run_parser.add_argument(
+        "--artifacts-dir",
+        type=Path,
+        default=None,
+        help="Optional directory where run artifacts should be stored",
+    )
+    run_parser.set_defaults(func=_cmd_run_pipeline)
+
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":  # pragma: no cover - manual invocation
+    raise SystemExit(main())
