@@ -19,9 +19,33 @@ source .venv/bin/activate
 pip install -e .
 ```
 
-### 2. Run pipelines from the CLI
+### 2. Use the interactive launcher
 
-Once the environment is active you can interact with the sample pipeline using the bundled
+Run the helper script to either spin up a brand-new project or execute an existing
+pipeline definition without remembering any CLI arguments:
+
+```bash
+python run.py
+```
+
+#### Create a new project flow
+
+1. Choose **Create a new project** when the menu appears.
+2. Provide a project identifier (used for filenames), display name, and optional description.
+3. Define any input fields your pipeline should collect (press Enter on an empty name to finish).
+4. Enter the Jinja prompt template (type `END` on its own line when finished). If you skip this step a helpful default prompt is used.
+5. The script writes a JSON pipeline under `pipelines/<identifier>.json` and a template under `templates/<identifier>.j2`.
+6. Confirm whether you want to immediately run the new project and provide values for each input if you do.
+
+#### Open an existing project flow
+
+1. Choose **Open an existing project** to see a numbered list of pipelines found in `pipelines/`.
+2. Select the project by number (or type a custom path) and supply the requested input values.
+3. The runner executes the pipeline and prints the run ID plus the artifact directory location.
+
+### 3. Run pipelines from the CLI
+
+Once the environment is active you can still interact with pipelines using the bundled
 `agent` command:
 
 ```bash
